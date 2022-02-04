@@ -1,7 +1,5 @@
 === AlsatPardakht Payment Gateway For Contact Form 7 ===
 
-=== AlsatPardakht Payment Gateway For Woocommerce ===
-
 Contributors: HKraToS
 
 author: AlsatPardakht
