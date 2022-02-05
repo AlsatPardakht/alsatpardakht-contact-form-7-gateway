@@ -1,7 +1,7 @@
 <?php
 
 /*
-Plugin Name: درگاه پرداخت آل‌سات پرداخت برای فرم های Contact 7
+Plugin Name: AlsatPardakht Payment Gateway For Contact Form 7
 Plugin URI: https://alsatpardakht.com
 Description: اتصال فرم های Contact Form 7 به درگاه پرداخت آل‌سات پرداخت
 Author: Hamid Musavi
@@ -11,8 +11,6 @@ Version: 1.0.0
 
 function postToAlsatPardakht($path, $parameters)
 {
-
-    $url = 'https://alsatpardakht.com/'.$path;
     try {
         $args = array(
             'body' => $parameters,
@@ -23,7 +21,7 @@ function postToAlsatPardakht($path, $parameters)
             'headers' => array(),
             'cookies' => array(),
         );
-        $result = wp_safe_remote_post($url, $args);
+        $result = wp_safe_remote_post($path, $args);
 
         if (!isset($result->errors)) {
             if (isset($result['body']) && $result['body']) {
@@ -42,7 +40,8 @@ function postToAlsatPardakht($path, $parameters)
 
 function ALSATPARDAKHT_CF7_relative_time($ptime)
 {
-    date_default_timezone_set("Asia/Tehran");
+//    date_default_timezone_set("Asia/Tehran");
+    date_default_timezone_set(get_option('timezone_string'));
     $etime = time() - $ptime;
     if ($etime < 1) {
         return '0 ثانیه';
@@ -65,7 +64,7 @@ function ALSATPARDAKHT_CF7_relative_time($ptime)
 }
 
 
-function result_payment_func($atts)
+function result_payment_func()
 {
     global $wpdb;
     $Return_MessageEmail = '';
@@ -89,7 +88,6 @@ function result_payment_func($atts)
         $Return_Track_Id = isset($_GET['invoice']) ? sanitize_text_field($_GET['invoice']) : $iN;
         $table_name = $wpdb->prefix.'alsatpardakht_contact_form_7';
         $cf_Form = $wpdb->get_row("SELECT * FROM $table_name WHERE transid=".$iN);
-
         if (isset($iN) && isset($iD)) {
 
 
@@ -107,11 +105,10 @@ function result_payment_func($atts)
             ];
 
             if ($vasetIGP) {
-                $result = postToAlsatPardakht('IPGAPI/Api22/VerifyTransaction.php', $data);
+                $result = postToAlsatPardakht('https://alsatpardakht.com/IPGAPI/Api22/VerifyTransaction.php', $data);
             } else {
-                $result = postToAlsatPardakht('API_V1/callback.php', $data);
+                $result = postToAlsatPardakht('https://alsatpardakht.com/API_V1/callback.php', $data);
             }
-
             if (isset($result->VERIFY->IsSuccess) && isset($result->PSP) && $result->PSP->IsSuccess === true) {
                 if ($result->PSP->Amount == $Amount) {
                     $Return_MessageEmail = 'success';
@@ -173,14 +170,16 @@ function result_payment_func($atts)
 
 add_shortcode('result_payment', 'result_payment_func');
 
+// remove ajax from contact form 7 to allow for php redirects
+add_filter( 'wpcf7_load_js', '__return_false' );
 
-function CreateMessage_cf7($title, $body, $endstr = "")
+function CreateMessage_cf7($alsatForm_title, $alsatForm_body, $alsatForm_endstr = "")
 {
-    if ($endstr != "") {
-        return $endstr;
+    if ($alsatForm_endstr != "") {
+        return $alsatForm_endstr;
     }
     $tmp = '<div style="border:#CCC 1px solid; width:90%;"> 
-    '.$title.'<br />'.$body.'</div>';
+    '.$alsatForm_title.'<br />'.$alsatForm_body.'</div>';
     return $tmp;
 }
 
@@ -193,7 +192,6 @@ function CreatePage_cf7($title, $body)
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title>'.$title.'</title>
 	</head>
-	<link rel="stylesheet"  media="all" type="text/css" href="'.plugins_url('style.css', __FILE__).'">
 	<body class="vipbody">	
 	<div class="mrbox2" > 
 	<h3><span>'.$title.'</span></h3>
@@ -248,31 +246,6 @@ function cf7pp_activate()
         dbDelta($sql);
     }
 
-
-    // remove ajax from contact form 7 to allow for php redirects
-    function wp_config_put($slash = '')
-    {
-        $config = file_get_contents(ABSPATH."wp-config.php");
-        $config = preg_replace("/^([\r\n\t ]*)(\<\?)(php)?/i", "<?php define('WPCF7_LOAD_JS', false);", $config);
-        file_put_contents(ABSPATH.$slash."wp-config.php", $config);
-    }
-
-    if (file_exists(ABSPATH."wp-config.php") && is_writable(ABSPATH."wp-config.php")) {
-        wp_config_put();
-    } else {
-        if (file_exists(dirname(ABSPATH)."/wp-config.php") && is_writable(dirname(ABSPATH)."/wp-config.php")) {
-            wp_config_put('/');
-        } else {
-            ?>
-            <div class="error">
-                <p><?php _e('wp-config.php is not writable, please make wp-config.php writable - set it to 0777 temporarily, then set back to its original setting after this plugin has been activated.',
-                        'cf7pp'); ?></p>
-            </div>
-            <?php
-            exit;
-        }
-    }
-
     // write initical options
     $cf7pp_options = array(
         'merchant' => '',
@@ -290,73 +263,8 @@ function cf7pp_activate()
 
 function cf7pp_deactivate()
 {
-
-    function wp_config_delete($slash = '')
-    {
-        $config = file_get_contents(ABSPATH."wp-config.php");
-        $config = preg_replace("/( ?)(define)( ?)(\()( ?)(['\"])WPCF7_LOAD_JS(['\"])( ?)(,)( ?)(0|1|true|false)( ?)(\))( ?);/i",
-            "", $config);
-        file_put_contents(ABSPATH.$slash."wp-config.php", $config);
-    }
-
-    if (file_exists(ABSPATH."wp-config.php") && is_writable(ABSPATH."wp-config.php")) {
-        wp_config_delete();
-    } else {
-        if (file_exists(dirname(ABSPATH)."/wp-config.php") && is_writable(dirname(ABSPATH)."/wp-config.php")) {
-            wp_config_delete('/');
-        } else {
-            if (file_exists(ABSPATH."wp-config.php") && !is_writable(ABSPATH."wp-config.php")) {
-                ?>
-                <div class="error">
-                    <p><?php _e('wp-config.php is not writable, please make wp-config.php writable - set it to 0777 temporarily, then set back to its original setting after this plugin has been deactivated.',
-                            'cf7pp'); ?></p>
-                </div>
-                <button onclick="goBack()">Go Back and try again</button>
-                <script>
-                    function goBack() {
-                        window.history.back();
-                    }
-                </script>
-                <?php
-                exit;
-            } else {
-                if (file_exists(dirname(ABSPATH)."/wp-config.php") && !is_writable(dirname(ABSPATH)."/wp-config.php")) {
-                    ?>
-                    <div class="error">
-                        <p><?php _e('wp-config.php is not writable, please make wp-config.php writable - set it to 0777 temporarily, then set back to its original setting after this plugin has been deactivated.',
-                                'cf7pp'); ?></p>
-                    </div>
-                    <button onclick="goBack()">Go Back and try again</button>
-                    <script>
-                        function goBack() {
-                            window.history.back();
-                        }
-                    </script>
-                    <?php
-                    exit;
-                } else {
-                    ?>
-                    <div class="error">
-                        <p><?php _e('wp-config.php is not writable, please make wp-config.php writable - set it to 0777 temporarily, then set back to its original setting after this plugin has been deactivated.',
-                                'cf7pp'); ?></p>
-                    </div>
-                    <button onclick="goBack()">Go Back and try again</button>
-                    <script>
-                        function goBack() {
-                            window.history.back();
-                        }
-                    </script>
-                    <?php
-                    exit;
-                }
-            }
-        }
-    }
-
-
     delete_option("cf7pp_options");
     delete_option("cf7pp_my_plugin_notice_shown");
-
 }
 
 
@@ -370,7 +278,7 @@ add_action('admin_notices', 'cf7pp_my_plugin_admin_notices');
 function cf7pp_my_plugin_admin_notices()
 {
     if (!get_option('cf7pp_my_plugin_notice_shown')) {
-        echo "<div class='updated'><p><a href='admin.php?page=cf7pp_admin_table'>برای تنظیم اطلاعات درگاه  کلیک کنید</a>.</p></div>";
+        echo wp_kses_post("<div class='updated'><p><a href='admin.php?page=cf7pp_admin_table'>برای تنظیم اطلاعات درگاه  کلیک کنید</a>.</p></div>");
         update_option("cf7pp_my_plugin_notice_shown", "true");
     }
 }
@@ -492,7 +400,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
 
         //input -name
         $admin_table_output .= "<table>";
-        $admin_table_output .= "<tr><td>مبلغ: </td><td><input type='text' name='price' style='text-align:left;direction:ltr;' value='$price'></td><td>(مبلغ به ریال)</td></tr>";
+        $admin_table_output .= "<tr><td>مبلغ: </td><td><input type='text' name='price' style='text-align:left;direction:ltr;' value='" . wp_kses_post($price) ."'></td><td>(مبلغ به ریال)</td></tr>";
 
         $admin_table_output .= "</table>";
 
@@ -573,7 +481,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
         $num_of_pages = ceil($total / $limit);
         $cntx = 0;
 
-        echo '<div class="wrap">
+        echo wp_kses_post('<div class="wrap">
 		<h2>تراکنش فرم ها</h2>
 		<table class="widefat post fixed" cellspacing="0">
 			<thead>
@@ -598,43 +506,43 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
 					<th scope="col" id="name" width="8%" class="manage-column" style="">وضعیت</th>
 				</tr>
 			</tfoot>
-			<tbody>';
+			<tbody>');
 
 
         if (count($transactions) == 0) {
 
-            echo '<tr class="alternate author-self status-publish iedit" valign="top">
+            echo wp_kses_post('<tr class="alternate author-self status-publish iedit" valign="top">
 					<td class="" colspan="6">هيج تراکنش وجود ندارد.</td>
-				</tr>';
+				</tr>');
 
         } else {
             foreach ($transactions as $transaction) {
 
                 echo '<tr class="alternate author-self status-publish iedit" valign="top">
-					<td class="">'.get_the_title($transaction['idform']).'</td>';
-                echo '<td class="">'.strftime("%a, %B %e, %Y %r", $transaction['created_at']);
+					<td class="">'.wp_kses_post(get_the_title($transaction['idform'])).'</td>';
+                echo '<td class="">'.wp_kses_post(strftime("%a, %B %e, %Y %r", $transaction['created_at']));
                 echo '<br />(';
-                echo ALSATPARDAKHT_CF7_relative_time($transaction["created_at"]);
+                echo wp_kses_post(ALSATPARDAKHT_CF7_relative_time($transaction["created_at"]));
                 echo ' قبل)</td>';
 
-                echo '<td class="">'.$transaction['email'].'</td>';
-                echo '<td class="">'.$transaction['user_mobile'].'</td>';
-                echo '<td class="">'.$transaction['cost'].' ریال</td>';
-                echo '<td class="" style="direction: ltr; text-align: right">'.$transaction['TrxMaskedCardNumber'].'<br>'.$transaction['TransactionReferenceID'].'</td>';
+                echo '<td class="">'.wp_kses_post($transaction['email']).'</td>';
+                echo '<td class="">'.wp_kses_post($transaction['user_mobile']).'</td>';
+                echo '<td class="">'.wp_kses_post($transaction['cost']).' ریال</td>';
+                echo '<td class="" style="direction: ltr; text-align: right">'.esc_html($transaction['TrxMaskedCardNumber']).'<br>'.esc_html($transaction['TransactionReferenceID']).'</td>';
                 echo '<td class="">';
 
                 if ($transaction['status'] == "success") {
-                    echo '<b style="color:#0C9F55">موفقیت آمیز</b>';
+                    echo wp_kses_post('<b style="color:#0C9F55">موفقیت آمیز</b>');
                 } else {
-                    echo '<b style="color:#f00">انجام نشده</b>';
+                    echo wp_kses_post('<b style="color:#f00">انجام نشده</b>');
                 }
-                echo '</td></tr>';
+                echo wp_kses_post('</td></tr>');
 
             }
         }
-        echo '</tbody>
+        echo wp_kses_post('</tbody>
 		</table>
-        <br>';
+        <br>');
 
 
         $page_links = paginate_links(array(
@@ -699,44 +607,20 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
         $theme_message = get_option('cf7pp_theme_message', '');
         $theme_error_message = get_option('cf7pp_theme_error_message', '');
 
-        echo "<div class='wrap'><h2>Contact Form 7 - Gateway Settings</h2></div><br />
-		<table width='90%'><tr><td>";
+        echo wp_kses_post("<div class='wrap'><h2>Contact Form 7 - Gateway Settings</h2></div><br />
+		<table width='90%'><tr><td>");
 
-        echo '<div style="background-color:#333333;padding:8px;color:#eee;font-size:12pt;font-weight:bold;">
+        echo wp_kses_post('<div style="background-color:#333333;padding:8px;color:#eee;font-size:12pt;font-weight:bold;">
 		&nbsp; پرداخت آنلاین برای فرم های Contact Form 7
 		</div><div style="background-color:#fff;border: 1px solid #E5E5E5;padding:5px;"><br />
-		
-		
-		<q1 style="color:#09F;">با استفاده از این قسمت میتوانید اطلاعات مربوط به درگاه  خود را تکمیل نمایید 
-    <br>
-    در بخش ایجاد فرم جدید می توانید براساس نام فیلد های زیر فرم را برای اتصال به درگاه پرداخت آماده کنید
-    <br>
-    user_email : برای دریافت ایمیل کاربر   
-    <br>
-    description : برای در یافت توضیحات خرید استفاده شود و الزامی شود  
-    <br>
-    user_mobile : برای دریافت موبایل کاربر   
-    <br>
-    user_price : جهت دریافت مبلغ از کاربر
-    <br>
- برای نمونه : [text user_price]
- <br>
-   برای مهم واجباری کردن* قرار دهید : [text* user_price]
-    </q1>
-<br/><br/><br/>
+
     <q1 style="color:#60F;">
     لینک بازگشت از تراکنش بایستی به یکی از برگه های سایت باشد 
     <br>
     در این برگه بایستی از شورت کد زیر استفاده شود
     <br>
     [result_payment]   
-    <br>
-<br/><br/><br/>
-حتما برررسی نمایید کد زیر در فایل wp-config.php وجود داشته باشد. که اگر نبود خودتان اضافه نمایید.
-<br>
-<pre style="direction: ltr;">define("WPCF7_LOAD_JS",false);</pre>
-<br/><br/><br/>
-
+<br/>
     <q1> 
 
     
@@ -758,18 +642,18 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
 
         <table> 
         <tr>
-            <td>API کد</td>';
+            <td>API کد</td>');
         echo '<td>
                     <input type="text" style="width:450px;text-align:left;direction:ltr;" name="gateway_merchantid" value="'.$value['gateway_merchantid'].'">
               </td>
           <td ><label for="isVaset">درگاه واسط</label><br></td>
             <td>
-                <input type="checkbox" id="isVaset" name="isVaset" value="1" '.$vasetChecked.'>
+                <input type="checkbox" id="isVaset" name="isVaset" value="1" '.wp_kses_post($vasetChecked).'>
             </td>
           
           <tr>
             <td>لینک بازگشت از تراکنش :<br><br><br></td>
-            <td><hr><input type="text" name="return" style="width:450px;text-align:left;direction:ltr;" value="'.$value['return'].'">
+            <td><hr><input type="text" name="return" style="width:450px;text-align:left;direction:ltr;" value="'.wp_kses_post($value['return']).'">
             الزامی
             <br />
             فقط  عنوان  برگه را قرار دهید مانند  Vpay
@@ -784,7 +668,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
 		  <tr>
             <td>قالب تراکنش موفق :<br><br><br><br></td>
             <td>
-			<textarea name="theme_message" style="width:450px;text-align:left;direction:ltr;">'.$theme_message.'</textarea>
+			<textarea name="theme_message" style="width:450px;text-align:left;direction:ltr;">'.wp_kses_post($theme_message).'</textarea>
 			<br/>
 			متنی که میخواهید در هنگام موفقیت آمیز بودن تراکنش نشان دهید
 			<br/>
@@ -797,7 +681,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
            <tr>
             <td>قالب تراکنش ناموفق :<br><br></td>
             <td>
-			<textarea name="theme_error_message" style="width:450px;text-align:left;direction:ltr;">'.$theme_error_message.'</textarea>
+			<textarea name="theme_error_message" style="width:450px;text-align:left;direction:ltr;">'.wp_kses_post($theme_error_message).'</textarea>
 			<br/>
 			متنی که میخواهید در هنگام موفقیت آمیز نبودن تراکنش نشان دهید
 			<br/><hr>
@@ -810,7 +694,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
            <td>رنگ متن موفقیت آمیز بودن تراکنش :  </td>
 
             <td>
-            <input type="text" name="sucess_color" style="width:150px;text-align:left;direction:ltr;color:'.$value['sucess_color'].'" value="'.$value['sucess_color'].'">
+            <input type="text" name="sucess_color" style="width:150px;text-align:left;direction:ltr;color:'.wp_kses_post($value['sucess_color']).'" value="'.wp_kses_post($value['sucess_color']).'">
            
  مانند :     #8BC34A     یا نام رنگ  
  green
@@ -823,7 +707,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
            <td>رنگ متن موفقیت آمیز نبودن تراکنش :  </td>
 
             <td>
-            <input type="text" name="error_color" style="width:150px;text-align:left;direction:ltr;color:'.$value['error_color'].'" value="'.$value['error_color'].'">
+            <input type="text" name="error_color" style="width:150px;text-align:left;direction:ltr;color:'.wp_kses_post($value['error_color']).'" value="'.wp_kses_post($value['error_color']).'">
             مانند : #f44336 یا نام رنگ  red
             </td>
           </tr>
@@ -849,11 +733,11 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
     // give warning if contact form 7 is not active
     function cf7pp_my_admin_notice()
     {
-        echo '<div class="error">
+        echo wp_kses_post('<div class="error">
 			<p>'._e('<b> افزونه درگاه بانکی برای افزونه Contact Form 7 :</b> Contact Form 7 باید فعال باشد ',
                 'my-text-domain').'</p>
 		</div>
-		';
+		');
     }
 
     add_action('admin_notices', 'cf7pp_my_admin_notice');
