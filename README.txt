@@ -1,19 +1,12 @@
 === AlsatPardakht Payment Gateway For Contact Form 7 ===
 
 Contributors: HKraToS
-
 author: AlsatPardakht
-
-author URI: http://www.alsatpardakht.com/
-
-Tags: contact, contact form 7, contact form ,alsatpardakht, iran, persian, farsi, e-commerce, ووکامرس, ووکامرس فارسی ,آلسات پرداخت,درگاه پرداخت,payment gateway
-
+author URI: https://www.alsatpardakht.com/
+Tags: contact form 7 ,alsatpardakht, farsi, e-commerce ,آلسات پرداخت,درگاه پرداخت,payment gateway
 Requires at least: 4.5
-
 Tested up to: 5.9
-
 Stable tag: 1.0.0
-
 License: GPLv2 or later
 
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
