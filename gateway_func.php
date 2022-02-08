@@ -40,8 +40,11 @@ function postToAlsatPardakht($path, $parameters)
 
 function ALSATPARDAKHT_CF7_relative_time($ptime)
 {
-//    date_default_timezone_set("Asia/Tehran");
-    date_default_timezone_set(get_option('timezone_string'));
+    if (get_option('timezone_string')) {
+        date_default_timezone_set(get_option('timezone_string'));
+    } else {
+        date_default_timezone_set("Asia/Tehran");
+    }
     $etime = time() - $ptime;
     if ($etime < 1) {
         return '0 ثانیه';
@@ -64,7 +67,7 @@ function ALSATPARDAKHT_CF7_relative_time($ptime)
 }
 
 
-function result_payment_func()
+function alsatpardakht_result_payment_func()
 {
     global $wpdb;
     $Return_MessageEmail = '';
@@ -95,7 +98,7 @@ function result_payment_func()
                 $Amount = $cf_Form->cost;
             } else {
                 $body = '<b style="color:'.$error_color.';">'.$theme_error_message.'<b/>';
-                return CreateMessage_cf7("", "", $body);
+                return alsatpardakht_createMessage_cf7("", "", $body);
             }
             $data = [
                 'Api' => $merchantId,
@@ -145,7 +148,7 @@ function result_payment_func()
             $body = '<b style="color:'.$sucess_color.';">'.stripslashes(str_replace('[transaction_id]',
                     $result->PSP->TransactionReferenceID,
                     $Theme_Message)).'<b/>';
-            return CreateMessage_cf7("", "", $body);
+            return alsatpardakht_createMessage_cf7("", "", $body);
         } else {
             if ($cf_Form->status == 'none') {
                 if ($Return_MessageEmail == 'error') {
@@ -158,22 +161,22 @@ function result_payment_func()
             }
             //Dispaly
             $body = '<b style="color:'.$error_color.';">'.$theme_error_message.'<b/>';
-            return CreateMessage_cf7("", "", $body);
+            return alsatpardakht_createMessage_cf7("", "", $body);
         }
     } else {
         $body = '<b style="color:'.$error_color.';">'.$theme_error_message.'<b/>';
-        return CreateMessage_cf7("", "", $body);
+        return alsatpardakht_createMessage_cf7("", "", $body);
     }
 
 
 }
 
-add_shortcode('result_payment', 'result_payment_func');
+add_shortcode('result_payment', 'alsatpardakht_result_payment_func');
 
 // remove ajax from contact form 7 to allow for php redirects
-add_filter( 'wpcf7_load_js', '__return_false' );
+add_filter('wpcf7_load_js', '__return_false');
 
-function CreateMessage_cf7($alsatForm_title, $alsatForm_body, $alsatForm_endstr = "")
+function alsatpardakht_createMessage_cf7($alsatForm_title, $alsatForm_body, $alsatForm_endstr = "")
 {
     if ($alsatForm_endstr != "") {
         return $alsatForm_endstr;
@@ -184,7 +187,7 @@ function CreateMessage_cf7($alsatForm_title, $alsatForm_body, $alsatForm_endstr 
 }
 
 
-function CreatePage_cf7($title, $body)
+function alsatpardakht_createPage_cf7($title, $body)
 {
     $tmp = '
 	<html>
@@ -212,12 +215,12 @@ function ALSATPARDAKHT_Contant_Form_7_Gateway_install()
 $dir = plugin_dir_path(__FILE__);
 
 //  plugin functions
-register_activation_hook(__FILE__, "cf7pp_activate");
-register_deactivation_hook(__FILE__, "cf7pp_deactivate");
+register_activation_hook(__FILE__, "alsatpardakht_cf7pp_activate");
+register_deactivation_hook(__FILE__, "alsatpardakht_cf7pp_deactivate");
 register_uninstall_hook(__FILE__, "cf7pp_uninstall");
 
 
-function cf7pp_activate()
+function alsatpardakht_cf7pp_activate()
 {
 
     global $wpdb;
@@ -261,7 +264,7 @@ function cf7pp_activate()
 }
 
 
-function cf7pp_deactivate()
+function alsatpardakht_cf7pp_deactivate()
 {
     delete_option("cf7pp_options");
     delete_option("cf7pp_my_plugin_notice_shown");
@@ -386,49 +389,48 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
             $before = "";
             $after = "";
         }
+        ?>
+        <form>
+            <div id='additional_settings-sortables' class='meta-box-sortables ui-sortable'>
+                <div id='additionalsettingsdiv' class='postbox'>
+                    <div class='handlediv' title='Click to toggle'><br></div>
+                    <h3 class='hndle ui-sortable-handle'><span>اطلاعات پرداخت برای فرم</span></h3>
+                    <div class='inside'>
 
-        $admin_table_output = "";
-        $admin_table_output .= "<form>";
-        $admin_table_output .= "<div id='additional_settings-sortables' class='meta-box-sortables ui-sortable'><div id='additionalsettingsdiv' class='postbox'>";
-        $admin_table_output .= "<div class='handlediv' title='Click to toggle'><br></div><h3 class='hndle ui-sortable-handle'> <span>اطلاعات پرداخت برای فرم</span></h3>";
-        $admin_table_output .= "<div class='inside'>";
+                        <div class='mail-field'>
+                            <input name='enable' id='cf71' value='1' type='checkbox' <?php echo esc_html($checked) ?> >
+                            <label for='cf71'>فعال سازی امکان پرداخت آنلاین</label>
+                        </div>
 
-        $admin_table_output .= "<div class='mail-field'>";
-        $admin_table_output .= "<input name='enable' id='cf71' value='1' type='checkbox' $checked>";
-        $admin_table_output .= "<label for='cf71'>فعال سازی امکان پرداخت آنلاین</label>";
-        $admin_table_output .= "</div>";
+                        <table>
+                            <tr>
+                                <td>مبلغ:</td>
+                                <td><input type='text' name='price' style='text-align:left;direction:ltr;'
+                                           value='<?php echo esc_html($price) ?>'></td>
+                                <td>(مبلغ به ریال)</td>
+                            </tr>
 
-        //input -name
-        $admin_table_output .= "<table>";
-        $admin_table_output .= "<tr><td>مبلغ: </td><td><input type='text' name='price' style='text-align:left;direction:ltr;' value='" . wp_kses_post($price) ."'></td><td>(مبلغ به ریال)</td></tr>";
-
-        $admin_table_output .= "</table>";
-
-
-        //input -id
-        $admin_table_output .= "<br> برای اتصال به درگاه پرداخت میتوانید از نام فیلدهای زیر استفاده نمایید ";
-        $admin_table_output .= "<br />
-        <span style='color:#F00;'>
-        user_email نام فیلد دریافت ایمیل کاربر بایستی user_email انتخاب شود.
-        <br />
-         description نام فیلد  توضیحات پرداخت بایستی description انتخاب شود.
-        <br />
-         user_mobile نام فیلد  موبایل بایستی user_mobile انتخاب شود.
-        <br />
-        user_price اگر کادر مبلغ در بالا خالی باشد می توانید به کاربر اجازه دهید مبلغ را خودش انتخاب نماید . کادر متنی با نام user_price ایجاد نمایید
-		<br/>
-		مانند [text* user_price]
-        </span>	";
-        $admin_table_output .= "<input type='hidden' name='email' value='2'>";
-
-        $admin_table_output .= "<input type='hidden' name='post' value='$post_id'>";
-
-        $admin_table_output .= "</td></tr></table></form>";
-        $admin_table_output .= "</div>";
-        $admin_table_output .= "</div>";
-        $admin_table_output .= "</div>";
-        echo $admin_table_output;
-
+                        </table>
+                        <br> برای اتصال به درگاه پرداخت میتوانید از نام فیلدهای زیر استفاده نمایید
+                        <br/>
+                        <span style='color:#F00;'>
+                            user_email نام فیلد دریافت ایمیل کاربر بایستی user_email انتخاب شود.
+                            <br/>
+                            description نام فیلد  توضیحات پرداخت بایستی description انتخاب شود.
+                            <br/>
+                            user_mobile نام فیلد  موبایل بایستی user_mobile انتخاب شود.
+                            <br/>
+                            user_price اگر کادر مبلغ در بالا خالی باشد می توانید به کاربر اجازه دهید مبلغ را خودش انتخاب نماید . کادر متنی با نام user_price ایجاد نمایید
+                            <br/>
+                            مانند [text* user_price]
+                            </span>
+                        <input type='hidden' name='email' value='2'>
+                        <input type='hidden' name='post' value='<?php echo esc_html($post_id) ?>'>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <?php
     }
 
 
@@ -481,68 +483,85 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
         $num_of_pages = ceil($total / $limit);
         $cntx = 0;
 
-        echo wp_kses_post('<div class="wrap">
-		<h2>تراکنش فرم ها</h2>
-		<table class="widefat post fixed" cellspacing="0">
-			<thead>
-				<tr>
-					<th scope="col" id="name" width="15%" class="manage-column" style="">نام فرم</th>
-					<th scope="col" id="name" width="" class="manage-column" style="">تاريخ</th>
-                    <th scope="col" id="name" width="" class="manage-column" style="">ایمیل</th>
-                    <th scope="col" id="name" width="" class="manage-column" style="">شماره تماس</th>
-                    <th scope="col" id="name" width="15%" class="manage-column" style="">مبلغ</th>
-                    <th scope="col" id="name" width="15%" class="manage-column" style="">شماره کارت و تراکنش</th>
-					<th scope="col" id="name" width="8%" class="manage-column" style="">وضعیت</th>
-				</tr>
-			</thead>
-			<tfoot>
-				<tr>
-					<th scope="col" id="name" width="15%" class="manage-column" style="">نام فرم</th>
-					<th scope="col" id="name" width="" class="manage-column" style="">تاريخ</th>
-                    <th scope="col" id="name" width="" class="manage-column" style="">ایمیل</th>
-                    <th scope="col" id="name" width="" class="manage-column" style="">شماره تماس</th>
-                    <th scope="col" id="name" width="15%" class="manage-column" style="">مبلغ</th>
-                    <th scope="col" id="name" width="15%" class="manage-column" style="">شماره کارت و تراکنش</th>
-					<th scope="col" id="name" width="8%" class="manage-column" style="">وضعیت</th>
-				</tr>
-			</tfoot>
-			<tbody>');
+        ?>
+
+        <div class="wrap">
+        <h2>تراکنش فرم ها</h2>
+        <table class="widefat post fixed" cellspacing="0">
+            <thead>
+            <tr>
+                <th scope="col" id="name" width="15%" class="manage-column" style="">نام فرم</th>
+                <th scope="col" id="name" width="" class="manage-column" style="">تاريخ</th>
+                <th scope="col" id="name" width="" class="manage-column" style="">ایمیل</th>
+                <th scope="col" id="name" width="" class="manage-column" style="">شماره تماس</th>
+                <th scope="col" id="name" width="15%" class="manage-column" style="">مبلغ</th>
+                <th scope="col" id="name" width="15%" class="manage-column" style="">شماره کارت و تراکنش</th>
+                <th scope="col" id="name" width="8%" class="manage-column" style="">وضعیت</th>
+            </tr>
+            </thead>
+            <tfoot>
+            <tr>
+                <th scope="col" id="name" width="15%" class="manage-column" style="">نام فرم</th>
+                <th scope="col" id="name" width="" class="manage-column" style="">تاريخ</th>
+                <th scope="col" id="name" width="" class="manage-column" style="">ایمیل</th>
+                <th scope="col" id="name" width="" class="manage-column" style="">شماره تماس</th>
+                <th scope="col" id="name" width="15%" class="manage-column" style="">مبلغ</th>
+                <th scope="col" id="name" width="15%" class="manage-column" style="">شماره کارت و تراکنش</th>
+                <th scope="col" id="name" width="8%" class="manage-column" style="">وضعیت</th>
+            </tr>
+            </tfoot>
+            <tbody>
+
+            <?php
 
 
-        if (count($transactions) == 0) {
+            if (count($transactions) == 0) {
+                ?>
+                <tr class="alternate author-self status-publish iedit" valign="top">
+                    <td class="" colspan="6">هيج تراکنش وجود ندارد.</td>
+                </tr>
+                <?php
+            } else {
+                foreach ($transactions as $transaction) {
+                    ?>
+                    <tr class="alternate author-self status-publish iedit" valign="top"
+                    <td class=""><?php echo esc_html(get_the_title($transaction['idform'])); ?></td>
+                    <td class=""><?php echo esc_html(get_the_title($transaction['idform'])); ?></td>
+                    <td class=""><?php echo esc_html(strftime("%a, %B %e, %Y %r", $transaction['created_at'])); ?>
+                        <br/>( <?php
+                        echo esc_html(ALSATPARDAKHT_CF7_relative_time($transaction["created_at"])); ?>
+                        قبل)
+                    </td>
 
-            echo wp_kses_post('<tr class="alternate author-self status-publish iedit" valign="top">
-					<td class="" colspan="6">هيج تراکنش وجود ندارد.</td>
-				</tr>');
+                    <td class=""><?php echo esc_html($transaction['email']); ?></td>
+                    <td class=""><?php echo esc_html($transaction['user_mobile']); ?></td>
+                    <td class=""><?php echo esc_html(wp_kses_post($transaction['cost'])); ?> ریال</td>
+                    <td class=""
+                        style="direction: ltr; text-align: right"><?php echo esc_html($transaction['TrxMaskedCardNumber']).'<br>'.esc_html($transaction['TransactionReferenceID']) ?></td>
+                    <td class="">
 
-        } else {
-            foreach ($transactions as $transaction) {
+                        <?php
 
-                echo '<tr class="alternate author-self status-publish iedit" valign="top">
-					<td class="">'.wp_kses_post(get_the_title($transaction['idform'])).'</td>';
-                echo '<td class="">'.wp_kses_post(strftime("%a, %B %e, %Y %r", $transaction['created_at']));
-                echo '<br />(';
-                echo wp_kses_post(ALSATPARDAKHT_CF7_relative_time($transaction["created_at"]));
-                echo ' قبل)</td>';
+                        if ($transaction['status'] == "success") {
+                            ?>
+                            <b style="color:#0C9F55">موفقیت آمیز</b>
+                            <?php
+                        } else {
+                            ?>
+                            <b style="color:#f00">انجام نشده</b>
+                            <?php
+                        }
+                        ?>
+                    </td></tr>
+                    <?php
 
-                echo '<td class="">'.wp_kses_post($transaction['email']).'</td>';
-                echo '<td class="">'.wp_kses_post($transaction['user_mobile']).'</td>';
-                echo '<td class="">'.wp_kses_post($transaction['cost']).' ریال</td>';
-                echo '<td class="" style="direction: ltr; text-align: right">'.esc_html($transaction['TrxMaskedCardNumber']).'<br>'.esc_html($transaction['TransactionReferenceID']).'</td>';
-                echo '<td class="">';
-
-                if ($transaction['status'] == "success") {
-                    echo wp_kses_post('<b style="color:#0C9F55">موفقیت آمیز</b>');
-                } else {
-                    echo wp_kses_post('<b style="color:#f00">انجام نشده</b>');
                 }
-                echo wp_kses_post('</td></tr>');
-
             }
-        }
-        echo wp_kses_post('</tbody>
-		</table>
-        <br>');
+            ?>
+            </tbody>
+        </table>
+        <br>
+        <?php
 
 
         $page_links = paginate_links(array(
@@ -555,13 +574,17 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
         ));
 
         if ($page_links) {
-            echo '<center><div class="tablenav"><div class="tablenav-pages"  style="float:none; margin: 1em 0">'.$page_links.'</div></div>
-		</center>';
+            ?>
+            <center><div class="tablenav"><div class="tablenav-pages"  style="float:none; margin: 1em 0"><?php echo wp_kses_post($page_links)?></div></div>
+		</center>
+            <?php
         }
 
-        echo '<br>
-		<hr>
-	</div>';
+        ?>
+            <br>
+            <hr>
+        </div>
+<?php
     }
 
 
