@@ -4,8 +4,8 @@
 Plugin Name: AlsatPardakht Payment Gateway For Contact Form 7
 Plugin URI: https://alsatpardakht.com
 Description: اتصال فرم های Contact Form 7 به درگاه پرداخت آل‌سات پرداخت
-Author: Hamid Musavi
-Author URI: https://github.com/MirHamit
+Author: AlsatPardakht
+Author URI: https://alsatpardakht.com
 Version: 1.0.0
 */
 
